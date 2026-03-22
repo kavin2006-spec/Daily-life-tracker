@@ -1,31 +1,212 @@
 import React, { useState } from "react";
 import { calcRecipeNutrition } from "./Data";
 
-function moviesOnDay(movies, ymd) {
-  return movies.filter((m) => m.date === ymd);
-}
+const PAGE_CSS = `
+  .hm-page {
+    display: flex; flex-direction: column; height: 100%;
+    font-family: 'IBM Plex Mono', monospace;
+    background: var(--bg); color: var(--cream);
+    user-select: none;
+  }
 
-function booksOnDay(books, ymd) {
-  return books.filter((b) => b.startDate <= ymd && b.endDate >= ymd);
-}
+  /* Top bar */
+  .hm-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 22px; height: 52px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    flex-shrink: 0; position: relative;
+  }
+  .hm-topbar::after {
+    content: ''; position: absolute;
+    bottom: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg,
+      transparent 0%, var(--blue-dim) 15%,
+      var(--gold) 50%, var(--blue-dim) 85%, transparent 100%);
+  }
+  .hm-wordmark {
+    font-family: 'Bebas Neue', sans-serif; font-size: 11px;
+    letter-spacing: 0.3em; color: var(--gold); opacity: 0.65;
+  }
+  .hm-month-nav { display: flex; align-items: center; gap: 14px; }
+  .hm-month-display { text-align: center; min-width: 180px; }
+  .hm-month-name {
+    font-family: 'Bebas Neue', sans-serif; font-size: 26px;
+    letter-spacing: 0.12em; color: var(--cream); line-height: 1; display: block;
+  }
+  .hm-month-sub { font-size: 11px; letter-spacing: 0.2em; color: var(--gold); display: block; margin-top: 1px; }
+  .hm-nav-btn {
+    width: 28px; height: 28px; background: none;
+    border: 1px solid var(--border-blue); border-radius: 2px;
+    color: var(--blue); font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+  .hm-nav-btn:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-lo); }
 
-function movieDotColor(count) {
-  if (count === 0) return null;
-  if (count === 1) return "#378add";
-  return "#3b9e4a";
-}
+  /* DOW */
+  .hm-dow-row {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface); flex-shrink: 0;
+  }
+  .hm-dow-cell {
+    text-align: center; font-size: 11px; font-weight: 700;
+    color: var(--cream-mid); padding: 7px 0;
+    letter-spacing: 0.12em; text-transform: uppercase;
+  }
+
+  /* Grid */
+  .hm-grid {
+    flex: 1; display: grid; grid-template-columns: repeat(7, 1fr);
+    grid-auto-rows: 1fr; gap: 1px;
+    background: rgba(212,168,75,0.06); overflow: hidden;
+  }
+  .hm-empty-cell { background: var(--bg); }
+  .hm-cell {
+    background: var(--surface2); padding: 6px 8px; cursor: pointer;
+    display: flex; flex-direction: column; gap: 3px;
+    position: relative; transition: filter 0.15s;
+  }
+  .hm-cell:hover { filter: brightness(1.3); }
+  .hm-cell-today {
+    background: var(--surface3);
+    outline: 1px solid var(--gold); outline-offset: -1px; z-index: 1;
+  }
+  .hm-day-num { font-size: 11px; color: var(--cream-mid); letter-spacing: 0.04em; }
+  .hm-day-num-today { color: var(--gold); font-weight: 700; }
+
+  /* Indicators */
+  .hm-movie-dot {
+    position: absolute; top: 5px; right: 5px;
+    width: 16px; height: 16px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .hm-movie-dot-text { font-size: 11px; font-weight: 700; color: var(--bg); }
+  .hm-health-dot {
+    position: absolute; top: 5px; right: 24px;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+  }
+  .hm-book-bars { margin-top: auto; display: flex; flex-direction: column; gap: 2px; }
+  .hm-book-bar  { height: 2px; border-radius: 1px; width: 100%; }
+  .hm-book-more { font-size: 11px; color: var(--cream-lo); letter-spacing: 0.06em; }
+
+  /* Legend */
+  .hm-legend {
+    display: flex; gap: 16px; padding: 8px 22px;
+    background: var(--surface); border-top: 1px solid var(--border);
+    flex-wrap: wrap; flex-shrink: 0;
+  }
+  .hm-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--cream-mid); letter-spacing: 0.06em; }
+  .hm-legend-swatch { width: 11px; height: 11px; border-radius: 1px; flex-shrink: 0; }
+
+  /* Popup */
+  @keyframes hm-popup-in {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to   { opacity: 1; transform: none; }
+  }
+  .hm-overlay {
+    position: fixed; inset: 0; background: rgba(8,8,12,0.88);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 500; backdrop-filter: blur(4px);
+  }
+  .hm-popup {
+    background: var(--surface); border: 1px solid var(--border-blue);
+    border-radius: 3px; width: 400px; max-height: 82vh;
+    overflow-y: auto; display: flex; flex-direction: column;
+    animation: hm-popup-in 0.18s ease;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.75), 0 0 0 1px rgba(212,168,75,0.08);
+    scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent;
+  }
+  .hm-popup-header {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 18px 20px 12px; border-bottom: 1px solid var(--border);
+    position: relative; background: var(--surface2); flex-shrink: 0;
+  }
+  .hm-popup-header::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--blue-dim), var(--gold-dim), transparent);
+  }
+  .hm-popup-weekday { font-size: 11px; color: var(--cream-mid); letter-spacing: 0.14em; text-transform: uppercase; }
+  .hm-popup-day {
+    font-family: 'Bebas Neue', sans-serif; font-size: 52px;
+    letter-spacing: 0.05em; color: var(--cream); line-height: 1;
+  }
+  .hm-popup-month { font-size: 11px; color: var(--gold); letter-spacing: 0.14em; }
+  .hm-close-btn {
+    position: absolute; top: 14px; right: 14px;
+    background: none; border: 1px solid var(--border); border-radius: 2px;
+    color: var(--cream-mid); font-size: 12px; cursor: pointer;
+    width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .hm-close-btn:hover { border-color: var(--red); color: var(--red); }
+
+  .hm-tab-row { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .hm-tab {
+    flex: 1; padding: 9px 0; background: none; border: none;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--cream-mid); cursor: pointer; transition: color 0.15s;
+  }
+  .hm-tab:hover { color: var(--cream); }
+  .hm-tab-active { color: var(--gold); border-bottom: 2px solid var(--gold); }
+
+  .hm-popup-body { padding: 14px 18px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .hm-sub-title {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--blue); margin-bottom: 4px;
+  }
+  .hm-none-text { font-size: 11px; color: var(--cream-lo); font-style: italic; }
+  .hm-popup-row {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 2px; padding: 7px 10px;
+  }
+  .hm-row-icon { font-size: 13px; }
+  .hm-row-text { flex: 1; font-size: 11px; color: var(--cream); letter-spacing: 0.03em; }
+  .hm-row-meta { font-size: 11px; color: var(--cream-mid); display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+
+  /* Health summary cards in popup */
+  .hm-health-cards {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px;
+  }
+  .hm-health-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 2px; padding: 8px 6px;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .hm-health-card-label { font-size: 10px; color: var(--cream-mid); letter-spacing: 0.1em; text-transform: uppercase; text-align: center; }
+  .hm-health-card-val   { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--cream); line-height: 1; }
+  .hm-health-card-unit  { font-size: 11px; color: var(--cream-mid); }
+
+  .hm-popup-hint { font-size: 11px; color: var(--cream-lo); text-align: center; padding: 8px 0 12px; letter-spacing: 0.08em; }
+
+  @media (max-width: 480px) {
+    .hm-topbar { padding: 0 14px; }
+    .hm-legend { padding: 7px 14px; }
+    .hm-popup  { width: calc(100vw - 24px); }
+    .hm-wordmark { display: none; }
+    .hm-month-name { font-size: 22px; }
+    .hm-health-cards { grid-template-columns: repeat(2, 1fr); }
+  }
+`;
+
+function moviesOnDay(movies, ymd)  { return movies.filter((m) => m.date === ymd); }
+function booksOnDay(books, ymd)    { return books.filter((b) => b.startDate <= ymd && b.endDate >= ymd); }
+function movieDotColor(count)      { if (!count) return null; return count === 1 ? "var(--blue)" : "var(--green)"; }
 
 function calcDayNutrition(ingredients, recipes, log) {
-  let totalCal = 0, totalProtein = 0;
+  let cal = 0, protein = 0;
   Object.entries(log.food).forEach(([recipeId, gramsEaten]) => {
     const recipe = recipes.find((r) => r.id === recipeId);
     if (!recipe) return;
-    const { cal, protein } = calcRecipeNutrition(ingredients, recipe, Number(gramsEaten));
-    totalCal += cal; totalProtein += protein;
+    const n = calcRecipeNutrition(ingredients, recipe, Number(gramsEaten));
+    cal += n.cal; protein += n.protein;
   });
-  return { cal: Math.round(totalCal), protein: Math.round(totalProtein * 10) / 10 };
+  return { cal: Math.round(cal), protein: Math.round(protein * 10) / 10 };
 }
-
 function calcBurned(workouts, log) {
   let total = Object.entries(log.workouts).reduce((sum, [id, sets]) => {
     const w = workouts.find((w) => w.id === id);
@@ -35,7 +216,10 @@ function calcBurned(workouts, log) {
   return Math.round(total);
 }
 
-export default function Home({ movies, books, healthLogs, updateHealthLog, workouts, ingredients, recipes }) {
+const MONTHS = ["January","February","March","April","May","June",
+  "July","August","September","October","November","December"];
+
+export default function HomePage({ movies, books, healthLogs, updateHealthLog, workouts, ingredients, recipes }) {
   const today = new Date();
   const [currentYear,  setCurrentYear]  = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
@@ -43,40 +227,33 @@ export default function Home({ movies, books, healthLogs, updateHealthLog, worko
   const [popupTab,     setPopupTab]     = useState("entertainment");
 
   function prevMonth() {
-    if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear(currentYear - 1); }
-    else setCurrentMonth(currentMonth - 1);
+    if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear(y => y - 1); }
+    else setCurrentMonth(m => m - 1);
   }
   function nextMonth() {
-    if (currentMonth === 11) { setCurrentMonth(0); setCurrentYear(currentYear + 1); }
-    else setCurrentMonth(currentMonth + 1);
+    if (currentMonth === 11) { setCurrentMonth(0); setCurrentYear(y => y + 1); }
+    else setCurrentMonth(m => m + 1);
   }
 
-  const monthName   = new Date(currentYear, currentMonth, 1).toLocaleString("default", { month: "long" });
   const firstDow    = new Date(currentYear, currentMonth, 1).getDay();
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-
   const cells = [];
   for (let i = 0; i < firstDow; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
   const isToday = (d) =>
-    d === today.getDate() &&
-    currentMonth === today.getMonth() &&
-    currentYear  === today.getFullYear();
+    d === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear();
 
-  // Popup data — all calculated here so they're always up to date
-  const popupYMD    = selectedDay;
-  const popupMovies = popupYMD ? moviesOnDay(movies, popupYMD) : [];
-  const popupBooks  = popupYMD ? booksOnDay(books, popupYMD)   : [];
-  const popupLog    = popupYMD ? (healthLogs[popupYMD] || { food: {}, workouts: {}, steps: "" }) : null;
+  const popupMovies = selectedDay ? moviesOnDay(movies, selectedDay) : [];
+  const popupBooks  = selectedDay ? booksOnDay(books, selectedDay)   : [];
+  const popupLog    = selectedDay ? (healthLogs[selectedDay] || { food: {}, workouts: {}, steps: "" }) : null;
   const { cal: intake, protein } = popupLog
-    ? calcDayNutrition(ingredients, recipes, popupLog)
-    : { cal: 0, protein: 0 };
+    ? calcDayNutrition(ingredients, recipes, popupLog) : { cal: 0, protein: 0 };
   const burned    = popupLog ? calcBurned(workouts, popupLog) : 0;
   const net       = intake - burned;
   const popupDate = selectedDay ? new Date(selectedDay + "T00:00:00") : null;
+  const proteinColor = protein >= 100 && protein <= 130 ? "var(--green)" : "var(--red)";
 
-  // Build logged food list for display in health tab
   const loggedFood = popupLog
     ? Object.entries(popupLog.food).map(([recipeId, gramsEaten]) => {
         const recipe = recipes.find((r) => r.id === recipeId);
@@ -86,268 +263,198 @@ export default function Home({ movies, books, healthLogs, updateHealthLog, worko
       }).filter(Boolean)
     : [];
 
-  const proteinColor = protein >= 100 && protein <= 130 ? "#5db85d" : "#e07070";
-
   return (
-    <div style={s.page}>
+    <>
+      <style>{PAGE_CSS}</style>
+      <div className="hm-page">
 
-      {/* TOP BAR */}
-      <div style={s.topBar}>
-        <button style={s.navBtn} onClick={prevMonth}>← Prev</button>
-        <span style={s.monthLabel}>{monthName} {currentYear}</span>
-        <button style={s.navBtn} onClick={nextMonth}>Next →</button>
-      </div>
-
-      {/* DOW HEADER */}
-      <div style={s.dowRow}>
-        {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d) => (
-          <div key={d} style={s.dowCell}>{d}</div>
-        ))}
-      </div>
-
-      {/* GRID */}
-      <div style={s.grid}>
-        {cells.map((day, i) => {
-          if (!day) return <div key={`e-${i}`} style={s.emptyCell} />;
-          const ymd       = `${currentYear}-${String(currentMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-          const dayMovies = moviesOnDay(movies, ymd);
-          const dayBooks  = booksOnDay(books, ymd);
-          const dotColor  = movieDotColor(dayMovies.length);
-          const todayDay  = isToday(day);
-          const hasHealth = healthLogs[ymd] && (
-            Object.keys(healthLogs[ymd].food).length > 0 ||
-            Object.keys(healthLogs[ymd].workouts).length > 0 ||
-            healthLogs[ymd].steps
-          );
-
-          return (
-            <div
-              key={day}
-              style={{ ...s.cell, ...(todayDay ? s.todayCell : {}) }}
-              onClick={() => { setSelectedDay(ymd); setPopupTab("entertainment"); }}
-              onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1.35)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.filter = "brightness(1)"; }}
-            >
-              <span style={{ ...s.dayNum, ...(todayDay ? s.todayNum : {}) }}>{day}</span>
-
-              {dotColor && (
-                <div style={{ ...s.movieDot, backgroundColor: dotColor }}>
-                  <span style={s.movieDotText}>{dayMovies.length}</span>
-                </div>
-              )}
-
-              {hasHealth && <div style={s.healthDot} />}
-
-              <div style={s.bookBars}>
-                {dayBooks.slice(0, 2).map((b) => (
-                  <div key={b.id} style={{ ...s.bookBar, backgroundColor: b.color }} />
-                ))}
-                {dayBooks.length > 2 && <div style={s.bookBarMore}>+{dayBooks.length - 2}</div>}
-              </div>
+        {/* Top bar */}
+        <div className="hm-topbar">
+          <span className="hm-wordmark">Life Tracker</span>
+          <div className="hm-month-nav">
+            <button className="hm-nav-btn" onClick={prevMonth}>‹</button>
+            <div className="hm-month-display">
+              <span className="hm-month-name">{MONTHS[currentMonth]}</span>
+              <span className="hm-month-sub">{currentYear}</span>
             </div>
-          );
-        })}
-      </div>
+            <button className="hm-nav-btn" onClick={nextMonth}>›</button>
+          </div>
+          <span style={{ width: 80 }} />
+        </div>
 
-      {/* LEGEND */}
-      <div style={s.legend}>
-        <div style={s.legendItem}>
-          <div style={{ ...s.legendSwatch, backgroundColor: "#1e2a3a", outline: "2px solid #378add", outlineOffset: "1px" }} />
-          <span>Today</span>
+        {/* DOW */}
+        <div className="hm-dow-row">
+          {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d) => (
+            <div key={d} className="hm-dow-cell">{d}</div>
+          ))}
         </div>
-        <div style={s.legendItem}>
-          <div style={{ ...s.legendSwatch, borderRadius: "50%", backgroundColor: "#378add" }} />
-          <span>1 movie</span>
-        </div>
-        <div style={s.legendItem}>
-          <div style={{ ...s.legendSwatch, borderRadius: "50%", backgroundColor: "#3b9e4a" }} />
-          <span>2+ movies</span>
-        </div>
-        <div style={s.legendItem}>
-          <div style={{ ...s.legendSwatch, borderRadius: 2, backgroundColor: "#854f0b" }} />
-          <span>Book in progress</span>
-        </div>
-        <div style={s.legendItem}>
-          <div style={{ ...s.legendSwatch, borderRadius: "50%", backgroundColor: "#5db85d" }} />
-          <span>Health logged</span>
-        </div>
-      </div>
 
-      {/* POPUP */}
-      {selectedDay && (
-        <div style={s.overlay} onClick={() => setSelectedDay(null)}>
-          <div style={s.popup} onClick={(e) => e.stopPropagation()}>
-
-            {/* Header */}
-            <div style={s.popupHeader}>
-              <span style={s.popupWeekday}>{popupDate.toLocaleString("default", { weekday: "long" })}</span>
-              <span style={s.popupDay}>{popupDate.getDate()}</span>
-              <span style={s.popupMonth}>{popupDate.toLocaleString("default", { month: "short" })}</span>
-              <button style={s.closeBtn} onClick={() => setSelectedDay(null)}>✕</button>
-            </div>
-
-            {/* Tabs */}
-            <div style={s.tabRow}>
-              <button
-                style={{ ...s.tab, ...(popupTab === "entertainment" ? s.tabActive : {}) }}
-                onClick={() => setPopupTab("entertainment")}
+        {/* Grid */}
+        <div className="hm-grid">
+          {cells.map((day, i) => {
+            if (!day) return <div key={`e-${i}`} className="hm-empty-cell" />;
+            const ymd       = `${currentYear}-${String(currentMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+            const dayMovies = moviesOnDay(movies, ymd);
+            const dayBooks  = booksOnDay(books, ymd);
+            const dotColor  = movieDotColor(dayMovies.length);
+            const isT       = isToday(day);
+            const hasHealth = healthLogs[ymd] && (
+              Object.keys(healthLogs[ymd].food).length > 0 ||
+              Object.keys(healthLogs[ymd].workouts).length > 0 ||
+              healthLogs[ymd].steps
+            );
+            return (
+              <div key={day}
+                className={`hm-cell${isT ? " hm-cell-today" : ""}`}
+                onClick={() => { setSelectedDay(ymd); setPopupTab("entertainment"); }}
               >
-                🎬 Entertainment
-              </button>
-              <button
-                style={{ ...s.tab, ...(popupTab === "health" ? s.tabActive : {}) }}
-                onClick={() => setPopupTab("health")}
-              >
-                💪 Health
-              </button>
-            </div>
-
-            <div style={s.popupBody}>
-
-              {/* ── ENTERTAINMENT TAB ── */}
-              {popupTab === "entertainment" && (
-                <>
-                  <div style={s.subTitle}>Movies</div>
-                  {popupMovies.length === 0 ? (
-                    <p style={s.noneText}>No movies logged</p>
-                  ) : (
-                    popupMovies.map((m) => (
-                      <div key={m.id} style={s.popupRow}>
-                        <span style={s.rowIcon}>🎞</span>
-                        <span style={s.rowText}>{m.title}</span>
-                      </div>
-                    ))
-                  )}
-                  <div style={{ ...s.subTitle, marginTop: 12 }}>Books</div>
-                  {popupBooks.length === 0 ? (
-                    <p style={s.noneText}>No books in progress</p>
-                  ) : (
-                    popupBooks.map((b) => (
-                      <div key={b.id} style={s.popupRow}>
-                        <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: b.color, flexShrink: 0 }} />
-                        <span style={s.rowText}>{b.title}</span>
-                      </div>
-                    ))
-                  )}
-                </>
-              )}
-
-              {/* ── HEALTH TAB ── */}
-              {popupTab === "health" && (
-                <>
-                  {/* Summary cards */}
-                  <div style={s.healthCards}>
-                    <div style={s.healthCard}>
-                      <span style={s.healthCardLabel}>Consumed</span>
-                      <span style={s.healthCardVal}>{intake}</span>
-                      <span style={s.healthCardUnit}>cal</span>
-                    </div>
-                    <div style={s.healthCard}>
-                      <span style={s.healthCardLabel}>Burned</span>
-                      <span style={{ ...s.healthCardVal, color: "#5db85d" }}>{burned}</span>
-                      <span style={s.healthCardUnit}>cal</span>
-                    </div>
-                    <div style={s.healthCard}>
-                      <span style={s.healthCardLabel}>Net</span>
-                      <span style={{ ...s.healthCardVal, color: net > 0 ? "#e07070" : "#5db85d" }}>
-                        {net > 0 ? "+" : ""}{net}
-                      </span>
-                      <span style={s.healthCardUnit}>cal</span>
-                    </div>
-                    <div style={s.healthCard}>
-                      <span style={s.healthCardLabel}>Protein</span>
-                      <span style={{ ...s.healthCardVal, color: proteinColor }}>{protein}</span>
-                      <span style={s.healthCardUnit}>g</span>
-                    </div>
+                <span className={`hm-day-num${isT ? " hm-day-num-today" : ""}`}>{day}</span>
+                {dotColor && (
+                  <div className="hm-movie-dot" style={{ background: dotColor }}>
+                    <span className="hm-movie-dot-text">{dayMovies.length}</span>
                   </div>
-
-                  {/* Food logged */}
-                  <div style={s.subTitle}>Food logged</div>
-                  {loggedFood.length === 0 ? (
-                    <p style={s.noneText}>Nothing logged</p>
-                  ) : (
-                    loggedFood.map((item) => (
-                      <div key={item.id} style={s.popupRow}>
-                        <span style={s.rowIcon}>🍽</span>
-                        <span style={s.rowText}>{item.name} · {item.grams}g</span>
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 }}>
-                          <span style={s.rowCals}>{item.cal} cal</span>
-                          <span style={{ ...s.rowCals, color: "#378add" }}>{item.protein}g prot</span>
-                        </div>
-                      </div>
-                    ))
+                )}
+                {hasHealth && <div className="hm-health-dot" />}
+                <div className="hm-book-bars">
+                  {dayBooks.slice(0, 2).map((b) => (
+                    <div key={b.id} className="hm-book-bar" style={{ backgroundColor: b.color }} />
+                  ))}
+                  {dayBooks.length > 2 && (
+                    <div className="hm-book-more">+{dayBooks.length - 2}</div>
                   )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
-                  {/* Steps */}
-                  {popupLog.steps && (
-                    <>
-                      <div style={{ ...s.subTitle, marginTop: 8 }}>Steps</div>
-                      <div style={s.popupRow}>
-                        <span style={s.rowIcon}>👟</span>
-                        <span style={s.rowText}>{Number(popupLog.steps).toLocaleString()} steps</span>
-                        <span style={s.rowCals}>{Math.round(popupLog.steps * 0.0425)} cal</span>
-                      </div>
-                    </>
-                  )}
-                </>
-              )}
-
-            </div>
-            <p style={s.popupHint}>Click outside to close</p>
+        {/* Legend */}
+        <div className="hm-legend">
+          <div className="hm-legend-item">
+            <div className="hm-legend-swatch" style={{ background: "var(--surface3)", outline: "1px solid var(--gold)", outlineOffset: "1px" }} />
+            <span>today</span>
+          </div>
+          <div className="hm-legend-item">
+            <div className="hm-legend-swatch" style={{ borderRadius: "50%", background: "var(--blue)" }} />
+            <span>1 movie</span>
+          </div>
+          <div className="hm-legend-item">
+            <div className="hm-legend-swatch" style={{ borderRadius: "50%", background: "var(--green)" }} />
+            <span>2+ movies</span>
+          </div>
+          <div className="hm-legend-item">
+            <div className="hm-legend-swatch" style={{ borderRadius: 1, background: "var(--gold-dim)" }} />
+            <span>book in progress</span>
+          </div>
+          <div className="hm-legend-item">
+            <div className="hm-legend-swatch" style={{ borderRadius: "50%", background: "var(--green)" }} />
+            <span>health logged</span>
           </div>
         </div>
-      )}
-    </div>
+
+        {/* Popup */}
+        {selectedDay && (
+          <div className="hm-overlay" onClick={() => setSelectedDay(null)}>
+            <div className="hm-popup" onClick={(e) => e.stopPropagation()}>
+
+              <div className="hm-popup-header">
+                <div className="hm-popup-weekday">
+                  {popupDate.toLocaleString("default", { weekday: "long" })}
+                </div>
+                <div className="hm-popup-day">{popupDate.getDate()}</div>
+                <div className="hm-popup-month">
+                  {popupDate.toLocaleString("default", { month: "short" })} {popupDate.getFullYear()}
+                </div>
+                <button className="hm-close-btn" onClick={() => setSelectedDay(null)}>✕</button>
+              </div>
+
+              <div className="hm-tab-row">
+                <button
+                  className={`hm-tab${popupTab === "entertainment" ? " hm-tab-active" : ""}`}
+                  onClick={() => setPopupTab("entertainment")}>entertainment</button>
+                <button
+                  className={`hm-tab${popupTab === "health" ? " hm-tab-active" : ""}`}
+                  onClick={() => setPopupTab("health")}>health</button>
+              </div>
+
+              <div className="hm-popup-body">
+
+                {popupTab === "entertainment" && (
+                  <>
+                    <div className="hm-sub-title">Movies</div>
+                    {popupMovies.length === 0
+                      ? <p className="hm-none-text">no movies logged</p>
+                      : popupMovies.map((m) => (
+                          <div key={m.id} className="hm-popup-row">
+                            <span className="hm-row-icon">🎞</span>
+                            <span className="hm-row-text">{m.title}</span>
+                          </div>
+                        ))
+                    }
+                    <div className="hm-sub-title" style={{ marginTop: 10 }}>Books</div>
+                    {popupBooks.length === 0
+                      ? <p className="hm-none-text">no books in progress</p>
+                      : popupBooks.map((b) => (
+                          <div key={b.id} className="hm-popup-row">
+                            <div style={{ width: 8, height: 8, borderRadius: 1, background: b.color, flexShrink: 0 }} />
+                            <span className="hm-row-text">{b.title}</span>
+                          </div>
+                        ))
+                    }
+                  </>
+                )}
+
+                {popupTab === "health" && (
+                  <>
+                    <div className="hm-health-cards">
+                      {[
+                        { label: "Consumed", val: intake, unit: "cal", color: "var(--red)" },
+                        { label: "Burned",   val: burned, unit: "cal", color: "var(--green)" },
+                        { label: "Net",      val: `${net > 0 ? "+" : ""}${net}`, unit: "cal", color: net > 0 ? "var(--red)" : "var(--green)" },
+                        { label: "Protein",  val: protein, unit: "g",  color: proteinColor },
+                      ].map((c) => (
+                        <div key={c.label} className="hm-health-card">
+                          <span className="hm-health-card-label">{c.label}</span>
+                          <span className="hm-health-card-val" style={{ color: c.color }}>{c.val}</span>
+                          <span className="hm-health-card-unit">{c.unit}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="hm-sub-title">Food logged</div>
+                    {loggedFood.length === 0
+                      ? <p className="hm-none-text">nothing logged</p>
+                      : loggedFood.map((item) => (
+                          <div key={item.id} className="hm-popup-row">
+                            <span className="hm-row-icon">🍽</span>
+                            <span className="hm-row-text">{item.name} · {item.grams}g</span>
+                            <div className="hm-row-meta">
+                              <span style={{ color: "var(--red)" }}>{item.cal} cal</span>
+                              <span style={{ color: "var(--blue)" }}>{item.protein}g prot</span>
+                            </div>
+                          </div>
+                        ))
+                    }
+                    {popupLog.steps && (
+                      <>
+                        <div className="hm-sub-title" style={{ marginTop: 6 }}>Steps</div>
+                        <div className="hm-popup-row">
+                          <span className="hm-row-icon">👟</span>
+                          <span className="hm-row-text">{Number(popupLog.steps).toLocaleString()} steps</span>
+                          <span style={{ fontSize: 9, color: "var(--cream-mid)" }}>
+                            {Math.round(popupLog.steps * 0.0425)} cal
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+              <p className="hm-popup-hint">click outside to close</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
-
-const s = {
-  page:        { display: "flex", flexDirection: "column", height: "100%", fontFamily: "sans-serif", backgroundColor: "#141414", color: "#eee", userSelect: "none" },
-  topBar:      { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 24px", backgroundColor: "#1c1c1c", borderBottom: "1px solid #2a2a2a" },
-  navBtn:      { background: "none", border: "1px solid #3a3a3a", borderRadius: 8, padding: "4px 14px", cursor: "pointer", fontSize: 13, color: "#888" },
-  monthLabel:  { fontSize: 18, fontWeight: 700, color: "#eee" },
-  dowRow:      { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: "1px solid #2a2a2a", backgroundColor: "#1a1a1a" },
-  dowCell:     { textAlign: "center", fontSize: 11, fontWeight: 700, color: "#555", padding: "8px 0", letterSpacing: "0.05em" },
-  grid:        { flex: 1, display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gridAutoRows: "1fr", gap: 1, backgroundColor: "#2a2a2a", overflow: "hidden" },
-  emptyCell:   { backgroundColor: "#141414" },
-  cell:        { backgroundColor: "#1a1a1a", padding: "6px 8px", cursor: "pointer", display: "flex", flexDirection: "column", gap: 3, position: "relative", transition: "filter 0.15s" },
-  todayCell:   { backgroundColor: "#1e2a3a", outline: "2px solid #378add", outlineOffset: "-2px", zIndex: 1 },
-  dayNum:      { fontSize: 13, fontWeight: 500, color: "#888" },
-  todayNum:    { color: "#378add", fontWeight: 700 },
-  movieDot:    { position: "absolute", top: 6, right: 6, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" },
-  movieDotText:{ fontSize: 9, fontWeight: 700, color: "#fff" },
-  healthDot:   { position: "absolute", top: 6, right: 28, width: 8, height: 8, borderRadius: "50%", backgroundColor: "#5db85d" },
-  bookBars:    { marginTop: "auto", display: "flex", flexDirection: "column", gap: 2 },
-  bookBar:     { height: 3, borderRadius: 2, width: "100%" },
-  bookBarMore: { fontSize: 8, color: "#555" },
-  legend:      { display: "flex", gap: 16, padding: "10px 24px", backgroundColor: "#1a1a1a", borderTop: "1px solid #2a2a2a", flexWrap: "wrap" },
-  legendItem:  { display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: "#666" },
-  legendSwatch:{ width: 13, height: 13, borderRadius: 3, flexShrink: 0 },
-
-  overlay:     { position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 },
-  popup:       { backgroundColor: "#fff", borderRadius: 16, width: 400, maxHeight: "82vh", overflowY: "auto", display: "flex", flexDirection: "column" },
-  popupHeader: { display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 24px 12px", borderBottom: "1px solid #eee", position: "relative" },
-  popupWeekday:{ fontSize: 12, color: "#aaa" },
-  popupDay:    { fontSize: 48, fontWeight: 700, color: "#222", lineHeight: 1.1 },
-  popupMonth:  { fontSize: 13, color: "#aaa" },
-  closeBtn:    { position: "absolute", top: 16, right: 16, background: "none", border: "none", fontSize: 16, color: "#bbb", cursor: "pointer" },
-
-  tabRow:      { display: "flex", borderBottom: "1px solid #eee" },
-  tab:         { flex: 1, padding: "10px 0", background: "none", border: "none", fontSize: 13, fontWeight: 500, color: "#aaa", cursor: "pointer" },
-  tabActive:   { color: "#7c3aed", borderBottom: "2px solid #7c3aed" },
-
-  popupBody:   { padding: "16px 24px 8px", display: "flex", flexDirection: "column", gap: 6 },
-  subTitle:    { fontSize: 11, fontWeight: 700, color: "#aaa", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 4 },
-  noneText:    { fontSize: 12, color: "#ccc", fontStyle: "italic" },
-  popupRow:    { display: "flex", alignItems: "center", gap: 8, backgroundColor: "#f5f5f5", borderRadius: 8, padding: "7px 10px" },
-  rowIcon:     { fontSize: 14 },
-  rowText:     { flex: 1, fontSize: 13, fontWeight: 500, color: "#333" },
-  rowCals:     { fontSize: 11, color: "#aaa" },
-  popupHint:   { fontSize: 11, color: "#ccc", textAlign: "center", padding: "8px 0 14px" },
-
-  healthCards:     { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 12 },
-  healthCard:      { backgroundColor: "#f5f5f5", borderRadius: 10, padding: "10px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 },
-  healthCardLabel: { fontSize: 9, color: "#aaa", fontWeight: 700, textTransform: "uppercase", textAlign: "center" },
-  healthCardVal:   { fontSize: 18, fontWeight: 700, color: "#222" },
-  healthCardUnit:  { fontSize: 10, color: "#aaa" },
-};

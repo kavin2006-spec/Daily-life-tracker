@@ -1,6 +1,235 @@
 import React, { useState } from "react";
 
-const COLORS = ["#1a4a7a", "#3b6d11", "#854f0b", "#993556", "#4a1b8a", "#0f6e56"];
+/* ── Colour swatches use the theme palette ── */
+const COLORS = [
+  "#2a3d5a", /* blue-dim   */
+  "#2a4a28", /* green-dim  */
+  "#6b4e18", /* gold-dim   */
+  "#3a2040", /* purple-dim */
+  "#3a2020", /* red-dim    */
+  "#1e3040", /* teal-dim   */
+];
+
+const PAGE_CSS = `
+  .bk-page {
+    display: flex; flex-direction: column; height: 100%;
+    font-family: 'IBM Plex Mono', monospace;
+    background: var(--bg); color: var(--cream);
+    position: relative;
+  }
+
+  /* Top bar */
+  .bk-topbar {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    padding: 0 22px; height: 52px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0; position: relative;
+  }
+  .bk-topbar::after {
+    content: ''; position: absolute;
+    bottom: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg,
+      transparent 0%, var(--blue-dim) 15%,
+      var(--gold) 50%, var(--blue-dim) 85%, transparent 100%);
+  }
+  .bk-month-nav { display: flex; align-items: center; gap: 14px; }
+  .bk-month-display { text-align: center; min-width: 180px; }
+  .bk-month-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px; letter-spacing: 0.12em;
+    color: var(--cream); line-height: 1; display: block;
+  }
+  .bk-month-sub {
+    font-size: 10px; letter-spacing: 0.2em;
+    color: var(--gold); display: block; margin-top: 1px;
+  }
+  .bk-nav-btn {
+    width: 28px; height: 28px; background: none;
+    border: 1px solid var(--border-blue); border-radius: 2px;
+    color: var(--blue); font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+  .bk-nav-btn:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-lo); }
+  .bk-wordmark {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 11px; letter-spacing: 0.3em;
+    color: var(--gold); opacity: 0.65;
+  }
+
+  /* Scroll */
+  .bk-scroll {
+    flex: 1; overflow-y: auto; padding: 20px 22px;
+    scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent;
+  }
+
+  /* Axis */
+  .bk-axis-row { display: flex; align-items: flex-end; margin-bottom: 6px; }
+  .bk-name-col { width: 130px; flex-shrink: 0; }
+  .bk-timeline-col { flex: 1; position: relative; height: 22px; }
+  .bk-axis-label {
+    position: absolute; font-size: 10px; color: var(--cream-mid);
+    transform: translateX(-50%); letter-spacing: 0.05em;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .bk-grid-line {
+    position: absolute; top: 0; bottom: 0;
+    width: 1px; background: rgba(212,168,75,0.07);
+  }
+
+  /* Book row */
+  .bk-book-row {
+    display: flex; align-items: center;
+    margin-bottom: 12px; cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .bk-book-row:hover { opacity: 0.85; }
+  .bk-book-name {
+    font-size: 11px; color: var(--cream-mid);
+    white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; padding-right: 10px;
+    letter-spacing: 0.04em;
+  }
+  .bk-bar {
+    position: absolute; height: 24px;
+    display: flex; align-items: center; overflow: hidden;
+    opacity: 0.85; transition: opacity 0.15s;
+  }
+  .bk-bar-label {
+    font-size: 11px; color: rgba(216,208,188,0.9);
+    padding-left: 7px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; flex: 1;
+    font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.04em;
+  }
+  .bk-arrow { font-size: 10px; color: rgba(216,208,188,0.8); padding: 0 4px; flex-shrink: 0; }
+  .bk-empty {
+    font-size: 11px; color: var(--cream-lo);
+    font-style: italic; padding: 20px 0; letter-spacing: 0.05em;
+  }
+
+  /* Add bar */
+  .bk-addbar {
+    background: var(--surface);
+    border-top: 2px solid transparent;
+    border-image: linear-gradient(90deg, transparent, var(--blue-dim), var(--gold-dim), transparent) 1;
+    padding: 13px 22px 15px; flex-shrink: 0;
+  }
+  .bk-addbar-header { display: flex; align-items: center; gap: 10px; margin-bottom: 11px; }
+  .bk-addbar-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.25em;
+    text-transform: uppercase; color: var(--gold);
+  }
+  .bk-addbar-rule { flex: 1; height: 1px; background: linear-gradient(90deg, var(--border), transparent); }
+  .bk-form-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .bk-input {
+    flex: 1; min-width: 100px; height: 32px;
+    background: var(--surface2); border: 1px solid var(--border-blue);
+    border-radius: 2px; padding: 0 10px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    color: var(--cream); outline: none; box-sizing: border-box;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .bk-input:focus { border-color: var(--gold); background: var(--surface3); }
+  .bk-input::placeholder { color: var(--cream-lo); }
+  input[type="date"].bk-input::-webkit-calendar-picker-indicator {
+    filter: invert(0.5) sepia(1) hue-rotate(180deg) saturate(1.5); cursor: pointer;
+  }
+  .bk-color-row { display: flex; gap: 6px; align-items: center; }
+  .bk-color-dot {
+    width: 18px; height: 18px; border-radius: 2px; cursor: pointer;
+    border: 1px solid rgba(212,168,75,0.2);
+    transition: transform 0.12s, border-color 0.12s;
+  }
+  .bk-color-dot:hover { transform: scale(1.15); }
+  .bk-color-dot.selected { border-color: var(--gold); outline: 2px solid var(--gold); outline-offset: 1px; }
+  .bk-add-btn {
+    height: 32px; padding: 0 14px;
+    background: var(--blue-dim); color: var(--blue);
+    border: 1px solid var(--blue-dim); border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .bk-add-btn:hover { background: var(--gold); border-color: var(--gold); color: var(--bg); }
+  .bk-add-btn:active { transform: scale(0.97); }
+
+  /* Modal */
+  @keyframes bk-modal-in {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to   { opacity: 1; transform: none; }
+  }
+  .bk-overlay {
+    position: fixed; inset: 0; background: rgba(8,8,12,0.9);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 500; backdrop-filter: blur(4px);
+  }
+  .bk-modal {
+    background: var(--surface); border: 1px solid rgba(122,156,196,0.3);
+    border-radius: 3px; width: 310px; overflow: hidden;
+    animation: bk-modal-in 0.18s ease;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.75), 0 0 0 1px rgba(212,168,75,0.08);
+  }
+  .bk-modal-header {
+    background: var(--surface2); border-bottom: 1px solid var(--border);
+    padding: 12px 16px 10px; display: flex; align-items: baseline;
+    gap: 10px; position: relative;
+  }
+  .bk-modal-header::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--blue-dim), var(--gold-dim), transparent);
+  }
+  .bk-modal-title {
+    font-family: 'Bebas Neue', sans-serif; font-size: 18px;
+    letter-spacing: 0.15em; color: var(--cream); line-height: 1; margin: 0;
+  }
+  .bk-modal-sub { font-size: 10px; color: var(--blue); letter-spacing: 0.15em; text-transform: uppercase; }
+  .bk-modal-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .bk-modal-label { font-size: 10px; color: var(--cream-mid); letter-spacing: 0.14em; text-transform: uppercase; }
+  .bk-modal-input {
+    width: 100%; height: 34px; background: var(--surface2);
+    border: 1px solid var(--border-blue); border-radius: 2px; padding: 0 10px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--cream);
+    outline: none; letter-spacing: 0.03em; box-sizing: border-box;
+    transition: border-color 0.15s;
+  }
+  .bk-modal-input:focus { border-color: var(--gold); }
+  .bk-modal-actions { display: flex; gap: 7px; padding: 0 16px 14px; }
+  .bk-btn-del {
+    flex: 1; height: 32px; background: var(--red-lo); color: var(--red);
+    border: 1px solid var(--red-mid); border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .bk-btn-del:hover { background: rgba(180,60,60,0.22); color: #e09090; }
+  .bk-btn-cancel {
+    flex: 1; height: 32px; background: transparent; color: var(--cream-mid);
+    border: 1px solid var(--border); border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .bk-btn-cancel:hover { border-color: var(--blue); color: var(--blue); }
+  .bk-btn-save {
+    flex: 1; height: 32px; background: var(--gold-dim); color: var(--gold);
+    border: 1px solid var(--gold-dim); border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .bk-btn-save:hover { background: var(--gold); color: var(--bg); }
+
+  @media (max-width: 480px) {
+    .bk-topbar { padding: 0 14px; }
+    .bk-scroll  { padding: 14px; }
+    .bk-addbar  { padding: 11px 14px 13px; }
+    .bk-name-col { width: 90px; }
+    .bk-wordmark { display: none; }
+  }
+`;
 
 function daysInMonth(year, month) {
   return new Date(year, month + 1, 0).getDate();
@@ -21,49 +250,40 @@ export default function BooksPage({ books, setBooks }) {
   const [editColor,   setEditColor]   = useState(COLORS[0]);
 
   function prevMonth() {
-    if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear(currentYear - 1); }
-    else setCurrentMonth(currentMonth - 1);
+    if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear(y => y - 1); }
+    else setCurrentMonth(m => m - 1);
   }
   function nextMonth() {
-    if (currentMonth === 11) { setCurrentMonth(0); setCurrentYear(currentYear + 1); }
-    else setCurrentMonth(currentMonth + 1);
+    if (currentMonth === 11) { setCurrentMonth(0); setCurrentYear(y => y + 1); }
+    else setCurrentMonth(m => m + 1);
   }
 
   const totalDays = daysInMonth(currentYear, currentMonth);
   const monthName = new Date(currentYear, currentMonth, 1)
     .toLocaleString("default", { month: "long" });
 
-  // Month boundaries as comparable strings
   const mStart = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-01`;
   const mEnd   = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(totalDays).padStart(2, "0")}`;
 
-  // Books that overlap this month at all
   const monthBooks = books.filter((b) => b.startDate <= mEnd && b.endDate >= mStart);
 
   function getBarInfo(book) {
-    // Clamp start/end to current month
     const clampedStart = book.startDate < mStart ? mStart : book.startDate;
     const clampedEnd   = book.endDate   > mEnd   ? mEnd   : book.endDate;
-
     const startDay = parseInt(clampedStart.split("-")[2]);
     const endDay   = parseInt(clampedEnd.split("-")[2]);
-
     const left  = ((startDay - 1) / totalDays) * 100;
     const width = Math.max(((endDay - startDay + 1) / totalDays) * 100, 1.5);
-
-    // Arrows when book extends beyond this month
-    const continuesLeft  = book.startDate < mStart;
-    const continuesRight = book.endDate   > mEnd;
-
-    return { left, width, continuesLeft, continuesRight };
+    return {
+      left, width,
+      continuesLeft:  book.startDate < mStart,
+      continuesRight: book.endDate   > mEnd,
+    };
   }
 
   function handleAdd() {
     if (!newTitle || !newStart || !newEnd) return;
-    setBooks([...books, {
-      id: Date.now(), title: newTitle,
-      startDate: newStart, endDate: newEnd, color: newColor,
-    }]);
+    setBooks([...books, { id: Date.now(), title: newTitle, startDate: newStart, endDate: newEnd, color: newColor }]);
     setNewTitle(""); setNewStart(""); setNewEnd(""); setNewColor(COLORS[0]);
   }
 
@@ -86,150 +306,139 @@ export default function BooksPage({ books, setBooks }) {
     setEditingBook(null);
   }
 
-  // Axis markers every 5 days
   const axisMarkers = [];
   for (let d = 1; d <= totalDays; d += 5) axisMarkers.push(d);
   if (axisMarkers[axisMarkers.length - 1] !== totalDays) axisMarkers.push(totalDays);
 
   return (
-    <div style={s.page}>
+    <>
+      <style>{PAGE_CSS}</style>
+      <div className="bk-page">
 
-      <div style={s.topBar}>
-        <button style={s.navBtn} onClick={prevMonth}>← Prev</button>
-        <span style={s.monthLabel}>{monthName} {currentYear} · Books</span>
-        <button style={s.navBtn} onClick={nextMonth}>Next →</button>
-      </div>
-
-      <div style={s.scrollArea}>
-
-        {/* Axis */}
-        <div style={s.axisRow}>
-          <div style={s.nameCol} />
-          <div style={s.timelineCol}>
-            {axisMarkers.map((d) => (
-              <span key={d} style={{ ...s.axisLabel, left: `${((d - 1) / totalDays) * 100}%` }}>
-                {d}
+        {/* Top bar */}
+        <div className="bk-topbar">
+          <span className="bk-wordmark">Life Tracker</span>
+          <div className="bk-month-nav">
+            <button className="bk-nav-btn" onClick={prevMonth}>‹</button>
+            <div className="bk-month-display">
+              <span className="bk-month-name">{monthName}</span>
+              <span className="bk-month-sub">
+                {currentYear} · {monthBooks.length} book{monthBooks.length !== 1 ? "s" : ""}
               </span>
-            ))}
+            </div>
+            <button className="bk-nav-btn" onClick={nextMonth}>›</button>
           </div>
+          <span style={{ width: 80 }} />
         </div>
 
-        {/* Book rows */}
-        {monthBooks.length === 0 ? (
-          <p style={s.emptyText}>No books this month — add one below</p>
-        ) : (
-          monthBooks.map((book) => {
-            const { left, width, continuesLeft, continuesRight } = getBarInfo(book);
-            return (
-              <div key={book.id} style={s.bookRow} onClick={() => openEdit(book)}>
-                <div style={s.nameCol}>
-                  <span style={s.bookName}>{book.title}</span>
-                </div>
-                <div style={s.timelineCol}>
-                  {/* Grid lines */}
-                  {axisMarkers.map((d) => (
-                    <div key={d} style={{ ...s.gridLine, left: `${((d - 1) / totalDays) * 100}%` }} />
-                  ))}
-                  {/* Bar */}
-                  <div style={{
-                    ...s.bar,
-                    left: `${left}%`,
-                    width: `${width}%`,
-                    backgroundColor: book.color,
-                    borderRadius: continuesLeft && continuesRight ? 0
-                      : continuesLeft ? "0 5px 5px 0"
-                      : continuesRight ? "5px 0 0 5px"
-                      : 5,
-                  }}>
-                    {continuesLeft  && <span style={s.arrowLeft}>←</span>}
-                    <span style={s.barLabel}>{book.title}</span>
-                    {continuesRight && <span style={s.arrowRight}>→</span>}
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* ADD FORM */}
-      <div style={s.addBar}>
-        <p style={s.addLabel}>ADD BOOK</p>
-        <div style={s.formRow}>
-          <input style={s.input} placeholder="Book name" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
-          <input style={{ ...s.input, width: 140 }} type="date" value={newStart} onChange={(e) => setNewStart(e.target.value)} />
-          <input style={{ ...s.input, width: 140 }} type="date" value={newEnd}   onChange={(e) => setNewEnd(e.target.value)} />
-          <div style={s.colorRow}>
-            {COLORS.map((c) => (
-              <div key={c} onClick={() => setNewColor(c)}
-                style={{ ...s.colorDot, backgroundColor: c, outline: newColor === c ? "2px solid #fff" : "none" }} />
-            ))}
-          </div>
-          <button style={s.addBtn} onClick={handleAdd}>Add</button>
-        </div>
-      </div>
-
-      {/* EDIT MODAL */}
-      {editingBook && (
-        <div style={s.modalOverlay} onClick={() => setEditingBook(null)}>
-          <div style={s.modal} onClick={(e) => e.stopPropagation()}>
-            <h3 style={s.modalTitle}>Edit Book</h3>
-            <input style={s.modalInput} placeholder="Book name" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
-            <label style={s.modalLabel}>Start date</label>
-            <input style={s.modalInput} type="date" value={editStart} onChange={(e) => setEditStart(e.target.value)} />
-            <label style={s.modalLabel}>End date</label>
-            <input style={s.modalInput} type="date" value={editEnd} onChange={(e) => setEditEnd(e.target.value)} />
-            <label style={s.modalLabel}>Color</label>
-            <div style={s.colorRow}>
-              {COLORS.map((c) => (
-                <div key={c} onClick={() => setEditColor(c)}
-                  style={{ ...s.colorDot, backgroundColor: c, outline: editColor === c ? "2px solid #fff" : "none" }} />
+        {/* Timeline */}
+        <div className="bk-scroll">
+          {/* Axis */}
+          <div className="bk-axis-row">
+            <div className="bk-name-col" />
+            <div className="bk-timeline-col">
+              {axisMarkers.map((d) => (
+                <span key={d} className="bk-axis-label"
+                  style={{ left: `${((d - 1) / totalDays) * 100}%` }}>
+                  {d}
+                </span>
               ))}
             </div>
-            <div style={s.modalBtns}>
-              <button style={s.deleteBtn} onClick={handleDelete}>Delete</button>
-              <button style={s.cancelBtn} onClick={() => setEditingBook(null)}>Cancel</button>
-              <button style={s.saveBtn} onClick={handleSaveEdit}>Save</button>
+          </div>
+
+          {monthBooks.length === 0 ? (
+            <p className="bk-empty">— no books this month —</p>
+          ) : (
+            monthBooks.map((book) => {
+              const { left, width, continuesLeft, continuesRight } = getBarInfo(book);
+              const radius = continuesLeft && continuesRight ? 0
+                : continuesLeft  ? "0 3px 3px 0"
+                : continuesRight ? "3px 0 0 3px"
+                : 3;
+              return (
+                <div key={book.id} className="bk-book-row" onClick={() => openEdit(book)}>
+                  <div className="bk-name-col">
+                    <span className="bk-book-name">{book.title}</span>
+                  </div>
+                  <div className="bk-timeline-col">
+                    {axisMarkers.map((d) => (
+                      <div key={d} className="bk-grid-line"
+                        style={{ left: `${((d - 1) / totalDays) * 100}%` }} />
+                    ))}
+                    <div className="bk-bar" style={{
+                      left: `${left}%`, width: `${width}%`,
+                      backgroundColor: book.color, borderRadius: radius,
+                    }}>
+                      {continuesLeft  && <span className="bk-arrow">←</span>}
+                      <span className="bk-bar-label">{book.title}</span>
+                      {continuesRight && <span className="bk-arrow">→</span>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Add bar */}
+        <div className="bk-addbar">
+          <div className="bk-addbar-header">
+            <span className="bk-addbar-label">Log a book</span>
+            <span className="bk-addbar-rule" />
+          </div>
+          <div className="bk-form-row">
+            <input className="bk-input" placeholder="Book title" value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)} />
+            <input className="bk-input" type="date" value={newStart} style={{ width: 130, flex: "none" }}
+              onChange={(e) => setNewStart(e.target.value)} />
+            <input className="bk-input" type="date" value={newEnd} style={{ width: 130, flex: "none" }}
+              onChange={(e) => setNewEnd(e.target.value)} />
+            <div className="bk-color-row">
+              {COLORS.map((c) => (
+                <div key={c} className={`bk-color-dot${newColor === c ? " selected" : ""}`}
+                  style={{ backgroundColor: c }}
+                  onClick={() => setNewColor(c)} />
+              ))}
             </div>
+            <button className="bk-add-btn" onClick={handleAdd}>log</button>
           </div>
         </div>
-      )}
-    </div>
+
+        {/* Edit modal */}
+        {editingBook && (
+          <div className="bk-overlay" onClick={() => setEditingBook(null)}>
+            <div className="bk-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="bk-modal-header">
+                <h3 className="bk-modal-title">Edit Entry</h3>
+                <span className="bk-modal-sub">book log</span>
+              </div>
+              <div className="bk-modal-body">
+                <input className="bk-modal-input" placeholder="Book title"
+                  value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+                <span className="bk-modal-label">Start date</span>
+                <input className="bk-modal-input" type="date"
+                  value={editStart} onChange={(e) => setEditStart(e.target.value)} />
+                <span className="bk-modal-label">End date</span>
+                <input className="bk-modal-input" type="date"
+                  value={editEnd} onChange={(e) => setEditEnd(e.target.value)} />
+                <span className="bk-modal-label">Colour</span>
+                <div className="bk-color-row">
+                  {COLORS.map((c) => (
+                    <div key={c} className={`bk-color-dot${editColor === c ? " selected" : ""}`}
+                      style={{ backgroundColor: c, width: 22, height: 22 }}
+                      onClick={() => setEditColor(c)} />
+                  ))}
+                </div>
+              </div>
+              <div className="bk-modal-actions">
+                <button className="bk-btn-del"    onClick={handleDelete}>delete</button>
+                <button className="bk-btn-cancel" onClick={() => setEditingBook(null)}>cancel</button>
+                <button className="bk-btn-save"   onClick={handleSaveEdit}>save</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
-
-const s = {
-  page:       { display: "flex", flexDirection: "column", height: "100%", fontFamily: "sans-serif", backgroundColor: "#141414", color: "#eee" },
-  topBar:     { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", backgroundColor: "#1c1c1c", borderBottom: "1px solid #2a2a2a", flexShrink: 0 },
-  navBtn:     { background: "none", border: "1px solid #3a3a3a", borderRadius: 8, padding: "4px 14px", cursor: "pointer", fontSize: 13, color: "#888" },
-  monthLabel: { fontSize: 17, fontWeight: 600, color: "#eee" },
-  scrollArea: { flex: 1, overflowY: "auto", padding: "20px" },
-  axisRow:    { display: "flex", alignItems: "flex-end", marginBottom: 6 },
-  nameCol:    { width: 130, flexShrink: 0 },
-  timelineCol:{ flex: 1, position: "relative", height: 24 },
-  axisLabel:  { position: "absolute", fontSize: 10, color: "#555", transform: "translateX(-50%)" },
-  gridLine:   { position: "absolute", top: 0, bottom: 0, width: 1, backgroundColor: "#2a2a2a" },
-  bookRow:    { display: "flex", alignItems: "center", marginBottom: 14, cursor: "pointer" },
-  bookName:   { fontSize: 12, color: "#aaa", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingRight: 8 },
-  bar:        { position: "absolute", height: 26, display: "flex", alignItems: "center", overflow: "hidden" },
-  barLabel:   { fontSize: 10, color: "rgba(255,255,255,0.85)", paddingLeft: 6, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1 },
-  arrowLeft:  { fontSize: 10, color: "rgba(255,255,255,0.85)", paddingLeft: 4, flexShrink: 0 },
-  arrowRight: { fontSize: 10, color: "rgba(255,255,255,0.85)", paddingRight: 4, flexShrink: 0 },
-  emptyText:  { fontSize: 13, color: "#444", fontStyle: "italic" },
-  addBar:     { backgroundColor: "#1c1c1c", borderTop: "1px solid #2a2a2a", padding: "12px 20px", flexShrink: 0 },
-  addLabel:   { fontSize: 11, fontWeight: 700, color: "#555", letterSpacing: "0.06em", marginBottom: 8 },
-  formRow:    { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" },
-  input:      { flex: 1, minWidth: 120, height: 36, border: "1px solid #333", borderRadius: 8, padding: "0 10px", fontSize: 13, outline: "none", boxSizing: "border-box", backgroundColor: "#242424", color: "#ddd" },
-  colorRow:   { display: "flex", gap: 6, alignItems: "center" },
-  colorDot:   { width: 20, height: 20, borderRadius: "50%", cursor: "pointer", outlineOffset: 2 },
-  addBtn:     { height: 36, padding: "0 18px", backgroundColor: "#1a4a7a", color: "#7ab3e0", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" },
-  modalOverlay:{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
-  modal:      { backgroundColor: "#1c1c1c", border: "1px solid #2a2a2a", borderRadius: 14, padding: "24px 24px 20px", width: 320, display: "flex", flexDirection: "column", gap: 10 },
-  modalTitle: { fontSize: 16, fontWeight: 700, margin: 0, color: "#eee" },
-  modalLabel: { fontSize: 11, color: "#555", fontWeight: 700, letterSpacing: "0.05em" },
-  modalInput: { width: "100%", height: 38, border: "1px solid #333", borderRadius: 8, padding: "0 10px", fontSize: 13, outline: "none", boxSizing: "border-box", backgroundColor: "#242424", color: "#ddd" },
-  modalBtns:  { display: "flex", gap: 8, marginTop: 4 },
-  deleteBtn:  { flex: 1, height: 36, backgroundColor: "#2a1515", color: "#e07070", border: "1px solid #3a2020", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" },
-  cancelBtn:  { flex: 1, height: 36, backgroundColor: "#242424", color: "#888", border: "1px solid #333", borderRadius: 8, fontSize: 13, cursor: "pointer" },
-  saveBtn:    { flex: 1, height: 36, backgroundColor: "#1a4a7a", color: "#7ab3e0", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" },
-};
