@@ -18,17 +18,17 @@ function loadFromStorage(key, fallback) {
 }
 
 const DEFAULT_MOVIES = [
-  { id: 1, title: "Dune Part 2",  date: "2026-03-03", image: null },
-  { id: 2, title: "Oppenheimer",  date: "2026-03-03", image: null },
-  { id: 3, title: "Poor Things",  date: "2026-03-11", image: null },
-  { id: 4, title: "The Martian",  date: "2026-03-19", image: null },
+  { id: 1, title: "Big fish",  date: "2026-03-03", image: null },
+  { id: 2, title: "Hail mary",  date: "2026-03-03", image: null },
+  { id: 3, title: "Mallrats",  date: "2026-03-11", image: null },
+  { id: 4, title: "Mortal kombat",  date: "2026-03-19", image: null },
 ];
 
 const DEFAULT_BOOKS = [
-  { id: 1, title: "Dune",          startDate: "2026-03-01", endDate: "2026-03-10", color: "#1a4a7a" },
-  { id: 2, title: "Sapiens",       startDate: "2026-03-08", endDate: "2026-03-22", color: "#3b6d11" },
-  { id: 3, title: "The Martian",   startDate: "2026-03-18", endDate: "2026-03-25", color: "#854f0b" },
-  { id: 4, title: "Atomic Habits", startDate: "2026-03-20", endDate: "2026-03-31", color: "#993556" },
+  { id: 1, title: "Kitchen",          startDate: "2026-03-01", endDate: "2026-03-10", color: "#1a4a7a" },
+  { id: 2, title: "The odyssey",       startDate: "2026-03-08", endDate: "2026-03-22", color: "#3b6d11" },
+  { id: 3, title: "White nights",   startDate: "2026-03-18", endDate: "2026-03-25", color: "#854f0b" },
+  { id: 4, title: "Roshomon", startDate: "2026-03-20", endDate: "2026-03-31", color: "#993556" },
 ];
 
 export default function App() {
