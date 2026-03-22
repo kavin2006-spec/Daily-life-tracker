@@ -1,4 +1,3 @@
-// Statsgraph.js
 // log.food     → { recipeId: gramsEaten, ... }
 // log.workouts → { workoutId: sets, ... }
 // log.steps    → number

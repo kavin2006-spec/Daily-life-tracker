@@ -449,7 +449,7 @@ export default function HealthPage({
 
   // Panel state
   const [panelOpen,  setPanelOpen]  = useState(false);
-  const [panelTab,   setPanelTab]   = useState("workouts"); // workouts | ingredients | recipes
+  const [panelTab,   setPanelTab]   = useState("workouts"); 
 
   // Workout state
   const [newWName,  setNewWName]  = useState("");

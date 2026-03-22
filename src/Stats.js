@@ -426,8 +426,8 @@ export default function StatsPage({ movies, books, healthLogs, workouts, ingredi
 
   // ── Stat cards & summary ─────────────────────────────────
   const statCards = [
-    { label: "Calories consumed", value: totalConsumed.toLocaleString(), color: "var(--red)",   bg: "var(--red-lo)",   stripe: "var(--red)",   icon: "🔥" },
-    { label: "Calories burned",   value: totalBurned.toLocaleString(),   color: "var(--green)", bg: "var(--green-lo)", stripe: "var(--green)", icon: "💪" },
+    { label: "Calories consumed", value: totalConsumed.toLocaleString(), color: "var(--red)",   bg: "var(--red-lo)",   stripe: "var(--red)",   icon: "🥦" },
+    { label: "Calories burned",   value: totalBurned.toLocaleString(),   color: "var(--green)", bg: "var(--green-lo)", stripe: "var(--green)", icon: "🔥" },
     { label: "Total steps",       value: Math.round(totalSteps).toLocaleString(), color: "var(--blue)", bg: "var(--blue-lo)", stripe: "var(--blue)", icon: "👟" },
     { label: "Movies watched",    value: monthMovies.length,             color: "var(--gold)",  bg: "var(--gold-lo)",  stripe: "var(--gold)",  icon: "🎬" },
     { label: "Books in progress", value: monthBooks.length,              color: "var(--blue)",  bg: "var(--blue-lo)",  stripe: "var(--blue)",  icon: "📖" },
