@@ -665,7 +665,7 @@ export default function HealthPage({
       {panelTab === "ingredients" && (
         <>
           <div>
-            <div className="hl-section-label">Add ingredient</div>
+            <div className="hl-section-label">Add ingredient/100g</div>
             <div className="hl-editor-add-row">
               <input className="hl-editor-input" placeholder="Name"
                 value={newIName} onChange={(e) => setNewIName(e.target.value)} />
